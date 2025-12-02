@@ -43,6 +43,9 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
+doctype_js = {
+    "Payment Request Tracker": "public/js/payment_request_details.js"
+}
 # doctype_js = {"doctype" : "public/js/doctype.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -147,7 +150,12 @@ app_license = "mit"
 
 # Scheduled Tasks
 # ---------------
-
+scheduler_events = {
+    "daily": [
+        "cash_management.cash_management.doctype.payment_request_tracker.payment_request_tracker.sync_payment_request_trackers",
+        "cash_management.cash_management.doctype.payment_request_tracker.payment_request_tracker.sync_payment_requester_trackers",
+    ]
+}
 # scheduler_events = {
 # 	"all": [
 # 		"cash_management.tasks.all"

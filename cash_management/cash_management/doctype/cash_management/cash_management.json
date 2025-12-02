@@ -1,0 +1,190 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-08-29 08:52:23.520478",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "payment_request_section",
+  "payment_request_id",
+  "payment_request_type",
+  "party_name",
+  "column_break_wygq",
+  "party_details",
+  "party",
+  "reference_doctype",
+  "reference_name",
+  "purchase_order_section",
+  "purchase_order",
+  "date",
+  "grand_total",
+  "payment_terms",
+  "cash_management_section",
+  "process_type",
+  "column_break_ntjg",
+  "process_date",
+  "payment_entry_section",
+  "payment_entry_id",
+  "payment_type",
+  "posting_date",
+  "column_break_perh",
+  "paid_amount",
+  "outstanding"
+ ],
+ "fields": [
+  {
+   "fieldname": "payment_request_section",
+   "fieldtype": "Section Break",
+   "label": "Payment Request"
+  },
+  {
+   "fieldname": "payment_request_id",
+   "fieldtype": "Link",
+   "label": "Payment Request ID",
+   "options": "Payment Request"
+  },
+  {
+   "fieldname": "payment_request_type",
+   "fieldtype": "Data",
+   "label": "Payment Request Type"
+  },
+  {
+   "fieldname": "party_name",
+   "fieldtype": "Data",
+   "label": "Party Name"
+  },
+  {
+   "fieldname": "column_break_wygq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "party_details",
+   "fieldtype": "Data",
+   "label": "Party Type"
+  },
+  {
+   "fieldname": "party",
+   "fieldtype": "Data",
+   "label": "Party"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Reference Doctype",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Reference Name",
+   "options": "reference_doctype"
+  },
+  {
+   "fieldname": "purchase_order_section",
+   "fieldtype": "Section Break",
+   "label": "Purchase Order"
+  },
+  {
+   "fieldname": "purchase_order",
+   "fieldtype": "Link",
+   "label": "Purchase Order",
+   "options": "Purchase Order"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "grand_total",
+   "fieldtype": "Currency",
+   "label": "Grand Total"
+  },
+  {
+   "fieldname": "payment_terms",
+   "fieldtype": "Table",
+   "label": "Payment Terms",
+   "options": "Payment Schedule"
+  },
+  {
+   "fieldname": "cash_management_section",
+   "fieldtype": "Section Break",
+   "label": "Cash Management"
+  },
+  {
+   "fieldname": "process_type",
+   "fieldtype": "Data",
+   "label": "Process Type"
+  },
+  {
+   "fieldname": "column_break_ntjg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "process_date",
+   "fieldtype": "Date",
+   "label": "Process Date"
+  },
+  {
+   "fieldname": "payment_entry_section",
+   "fieldtype": "Section Break",
+   "label": "Payment Entry"
+  },
+  {
+   "fieldname": "payment_entry_id",
+   "fieldtype": "Link",
+   "label": "Payment Entry ID",
+   "options": "Payment Entry"
+  },
+  {
+   "fieldname": "payment_type",
+   "fieldtype": "Data",
+   "label": "Payment Type"
+  },
+  {
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date"
+  },
+  {
+   "fieldname": "column_break_perh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
+   "label": "Paid Amount"
+  },
+  {
+   "fieldname": "outstanding",
+   "fieldtype": "Currency",
+   "label": "Outstanding"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-08-29 14:30:33.867363",
+ "modified_by": "Administrator",
+ "module": "Cash Management",
+ "name": "Cash Management",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
