@@ -105,6 +105,17 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
     });
     this.form.make();
 
+	let today = frappe.datetime.get_today();
+		let week_ago = frappe.datetime.add_days(today, -7);
+
+		// Set values in UI fields
+		this.form.set_value("from_date", week_ago);
+		this.form.set_value("to_date", today);
+
+		// Update internal filters
+		filters.from_date = week_ago;
+		filters.to_date = today;
+
     // ✅ Define fg AFTER make()
     const fg = this.form;
 
