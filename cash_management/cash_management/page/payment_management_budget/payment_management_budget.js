@@ -1,7 +1,7 @@
-frappe.pages['payment-management'].on_page_load = function (wrapper) {
+frappe.pages['payment-management-budget'].on_page_load = function (wrapper) {
 	let page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: 'Payment Requests and Trackers',
+		title: 'Cash Management Budget',
 		single_column: true
 	});
 
@@ -71,14 +71,56 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
 		loadData();
 	});
 
+	// 🔹 Send Notification button
+	page.add_inner_button(__('Send Notification'), function () {
+		frappe.confirm(__('Are you sure you want to send notifications to all users with enabled roles in Cash Management Budget?'), function () {
+			frappe.call({
+				method: 'cash_management.cash_management.page.payment_management_budget.payment_management_budget.process_email_notification',
+				freeze: true,
+				freeze_message: __('Sending...'),
+				callback: function (r) {
+					// Success handled by Python
+				}
+			});
+		});
+	});
+
 	// 🔹 FieldGroup creation
 	this.form = new frappe.ui.FieldGroup({
 		fields: [
-			{ fieldtype: 'Section Break', label: 'Filters', collapsible: 0 },
+			// ------------------------- SECTION 1 (2 fields) -------------------------
+			{ fieldtype: 'Section Break', collapsible: 0 },
+
+			{ fieldtype: 'Date', label: 'From Date', fieldname: 'from_date' },
+			{ fieldtype: 'Column Break' },
+
+			{ fieldtype: 'Date', label: 'To Date', fieldname: 'to_date' },
+			{ fieldtype: 'Column Break' },
+
+			{ fieldtype: 'Currency', label: 'Budget', fieldname: 'budget', read_only: 1 },
+
+
+			// ------------------------- SECTION 2 (2 fields) -------------------------
+			{ fieldtype: 'Section Break', },
+
+			{ fieldtype: 'Link', label: 'Supplier', fieldname: 'supplier', options: 'Supplier' },
+			{ fieldtype: 'Column Break' },
+
+			{ fieldtype: 'Currency', label: 'Target Budget', fieldname: 'target_budget' },
+			{ fieldtype: 'Column Break' },
+
+			{ fieldtype: 'Currency', label: 'Remaining Budget', fieldname: 'remaining_budget', read_only: 1 },
+
+
+			// ------------------------- SECTION 3 (3 fields) -------------------------
+			{ fieldtype: 'Section Break', },
+
 			{ fieldtype: 'Link', label: 'Payment Request', fieldname: 'payment_request', options: 'Payment Request' },
 			{ fieldtype: 'Column Break' },
+
 			{ fieldtype: 'Link', label: 'Reference Doctype', fieldname: 'reference_doctype', options: 'DocType' },
 			{ fieldtype: 'Column Break' },
+
 			{
 				fieldtype: 'Link',
 				label: 'Reference Name',
@@ -90,16 +132,15 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
 					return { doctype: selected_doctype, filters: {} };
 				}
 			},
-			{ fieldtype: 'Section Break' },
-			{ fieldtype: 'Link', label: 'Supplier', fieldname: 'supplier', options: 'Supplier' },
-			{ fieldtype: 'Column Break' },
-			{ fieldtype: 'Date', label: 'From Date', fieldname: 'from_date' },
-			{ fieldtype: 'Column Break' },
-			{ fieldtype: 'Date', label: 'To Date', fieldname: 'to_date' },
-			{ fieldtype: 'Section Break' },
+
+
+			// ------------------------- SECTION 4 (2 fields) -------------------------
+			{ fieldtype: 'Section Break', label: 'Status Filters' },
+
 			{ fieldtype: 'Check', label: 'Show Fully Paid Only', fieldname: 'only_fully_paid' },
 			{ fieldtype: 'Column Break' },
-			{ fieldtype: 'Check', label: 'Show Unpaid Only', fieldname: 'only_unpaid' }
+
+			{ fieldtype: 'Check', label: 'Show Unpaid Only', fieldname: 'only_unpaid', default: 1 }
 		],
 		body: filters_container[0]
 	});
@@ -145,6 +186,11 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
 		filters.supplier = this.value || '';
 		loadData();
 	};
+	if (fg.fields_dict.target_budget) {
+		fg.fields_dict.target_budget.df.onchange = function () {
+			updateRemainingBudget();
+		};
+	}
 	fg.fields_dict.from_date.df.onchange = function () {
 		filters.from_date = this.value || '';
 		loadData();
@@ -179,12 +225,14 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
 		return ` (${pct.toFixed(1)}%)`;
 	}
 
+	function updateRemainingBudget() {
+		const target = parseFloat(fg.get_value('target_budget')) || 0;
+		const budget = parseFloat(fg.get_value('budget')) || 0;
+		fg.set_value('remaining_budget', target - budget);
+	}
+
 	// renderTable (unchanged)
 	function renderTable(data) {
-		// 🔹 Dynamic column labels based on active tab
-		// const isInvoiceMemo = active_tab_doctype === "Invoice Released Memo";
-		// const amountLabel = isInvoiceMemo ? "Reference Doctype Amount" : "Purchase Order Amount";
-		// const remainingLabel = isInvoiceMemo ? "Remaining" : "PO Remaining";
 		// 🔹 Dynamic column labels based on active tab
 		let amountLabel = "Purchase Order Amount";
 		let remainingLabel = "PO Remaining";
@@ -197,19 +245,7 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
 			remainingLabel = "SO Remaining";
 		}
 
-
 		let rows = data.map(row => {
-			let tracker_html = "NA";
-			if (row.tracker) {
-				tracker_html = `
-					<a href="/app/payment-request-tracker/${row.tracker}">${row.tracker}</a>
-					<br>
-					<button class="btn btn-xs btn-secondary view-tracker" data-tracker="${row.tracker}" data-grand-total="${row.grand_total || 0}">
-						View Table
-					</button>
-				`;
-			}
-
 			const refLink = (row.reference_doctype && row.reference_name)
 				? `<a href="/app/${frappe.router.slug(row.reference_doctype)}/${row.reference_name}">${row.reference_name}</a>`
 				: (row.reference_name || "NA");
@@ -254,7 +290,19 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
 				`;
 			}
 
-			const budgetName = frappe.format(row.budget || 0, { fieldtype: "Currency" });
+			// Tracker link
+			const trackerLink = row.tracker
+				? `<a href="/app/payment-request-tracker/${row.tracker}">${row.tracker}</a>`
+				: "NA";
+
+			// Budget input field
+			const budgetValue = row.budget || row.po_grand_total || 0;
+			const budgetInput = row.tracker
+				? `<input type="number" class="form-control budget-input" 
+						data-tracker="${row.tracker}" 
+						value="${budgetValue}" 
+						style="width:150px;">`
+				: "NA";
 
 			return `
 				<tr>
@@ -266,8 +314,8 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
 					<td>${frappe.format(row.grand_total || 0, { fieldtype: "Currency" })}</td>
 					<td>${remainingValue}</td>
 					<td>${supplierBlock}</td>
-					<td>${budgetName}</td>
-					<td>${tracker_html}</td>
+					<td>${trackerLink}</td>
+					<td>${budgetInput}</td>
 				</tr>
 			`;
 		}).join("");
@@ -284,8 +332,8 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
 						<th>Grand Total</th>
 						<th>PR Remaining</th>
 						<th>Supplier</th>
+						<th>Tracker</th>
 						<th>Budget</th>
-						<th>Payment Request Tracker</th>
 					</tr>
 				</thead>
 				<tbody>${rows}</tbody>
@@ -294,222 +342,24 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
 
 		$(table_container).html(html);
 
-		// Attach click handler for View Table (tracker) — delegated
-		$(table_container).off("click", ".view-tracker").on("click", ".view-tracker", function () {
-			let tracker_name = $(this).data("tracker");
-			let grand_total = parseFloat($(this).data("grandTotal")) || 0;
+		// Attach change handler for budget inputs
+		$(table_container).off("change", ".budget-input").on("change", ".budget-input", function () {
+			const $input = $(this);
+			const tracker_name = $input.data("tracker");
+			const budget = parseFloat($input.val()) || 0;
 
 			frappe.call({
-				method: "cash_management.cash_management.page.payment_management.payment_management.get_tracker_child_table",
-				args: { tracker_name },
+				method: "cash_management.cash_management.page.payment_management_budget.payment_management_budget.update_tracker_budget",
+				args: { tracker_name, budget },
 				callback: function (res) {
-					if (!res.message) return;
-					let child_rows = res.message.child_rows || [];
-					let totals = res.message.totals || {};
-					let payment_entries = res.message.payment_entries || [];
-
-					// helpers to render tables
-					const renderReadOnlyTable = (rows) => {
-						if (!rows.length) return "<p>No child rows found.</p>";
-						return `
-							<table class="table table-bordered">
-								<thead>
-									<tr>
-										<th>Transaction Date</th>
-										<th>Paid %</th>
-										<th>Paid Amount</th>
-									</tr>
-								</thead>
-								<tbody>
-									${rows.map(c => {
-							const paidPct = formatPct(c.paid_amount, grand_total);
-							return `<tr>
-											<td>${c.transaction_date || "NA"}</td>
-											<td>${c.paid || 0}</td>
-											<td>${c.paid_amount || 0}${paidPct}</td>
-										</tr>`;
-						}).join("")}
-								</tbody>
-							</table>
-							<p class="text-muted mt-2 mb-0">Click <b>Edit</b> to modify rows.</p>
-						`;
-					};
-
-					const renderPaymentEntriesTable = (entries) => {
-						if (!entries.length) return "<p>No Payment Entries found for this Payment Request.</p>";
-						return `
-							<table class="table table-bordered">
-								<thead>
-									<tr>
-										<th>Payment Entry</th>
-										<th>Posting Date</th>
-										<th>Paid Amount</th>
-										<th>Party</th>
-										<th>Mode of Payment</th>
-										<th>Status</th>
-									</tr>
-								</thead>
-								<tbody>
-									${entries.map(e => {
-							const pePct = formatPct(e.paid_amount, grand_total);
-							return `<tr>
-											<td><a href="/app/payment-entry/${e.name}">${e.name}</a></td>
-											<td>${e.posting_date || "NA"}</td>
-											<td>${e.paid_amount || 0}${pePct}</td>
-											<td>${e.party || "NA"}</td>
-											<td>${e.mode_of_payment || "NA"}</td>
-											<td>${e.status || "NA"}</td>
-										</tr>`;
-						}).join("")}
-								</tbody>
-							</table>
-						`;
-					};
-
-					const renderEditableTable = (rows) => {
-						return `
-							<div class="tracker-edit-wrap" style="overflow:auto;">
-								<table class="table table-bordered edit-table mb-3">
-									<thead>
-										<tr>
-											<th>Transaction Date</th>
-											<th>Paid</th>
-											<th>Paid Amount</th>
-											<th>Actions</th>
-										</tr>
-									</thead>
-									<tbody>
-										${(rows.length ? rows : [{}]).map(c => `<tr>
-											<td><input type="date" class="form-control" data-field="transaction_date" value="${c.transaction_date || ""}"></td>
-											<td><input type="number" class="form-control" data-field="paid" value="${c.paid ?? 0}"></td>
-											<td><input type="number" class="form-control" data-field="paid_amount" value="${c.paid_amount ?? 0}"></td>
-											<td style="width:1%;white-space:nowrap;">
-												<button class="btn btn-danger btn-sm remove-row">Remove</button>
-											</td>
-										</tr>`).join("")}
-									</tbody>
-								</table>
-								<div class="d-flex justify-content-between">
-									<button class="btn btn-success add-row">+ Add Row</button>
-									<button class="btn btn-primary save-edits">Save Changes</button>
-								</div>
-							</div>
-						`;
-					};
-
-					// build dialog
-					let d = new frappe.ui.Dialog({
-						title: `Tracker Details: ${tracker_name}`,
-						size: "extra-large",
-						fields: [
-							{ fieldtype: "Float", fieldname: "total_amount_paid", label: "Total Amount Paid", default: totals.total_amount_paid || 0, read_only: 1 },
-							{ fieldtype: "Float", fieldname: "total_amount_remaining", label: "Total Amount Remaining", default: totals.total_amount_remaining || 0, read_only: 1 },
-							{
-								fieldtype: "Button", fieldname: "refresh_details", label: "Refresh Details", click: function () {
-									frappe.call({
-										method: "cash_management.cash_management.page.payment_management.payment_management.get_tracker_child_table",
-										args: { tracker_name },
-										callback: function (res2) {
-											if (!res2.message) return;
-											child_rows = res2.message.child_rows || [];
-											totals = res2.message.totals || [];
-											payment_entries = res2.message.payment_entries || [];
-											d.set_value("total_amount_paid", totals.total_amount_paid || 0);
-											d.set_value("total_amount_remaining", totals.total_amount_remaining || 0);
-											d.fields_dict.child_table_html.$wrapper.html(renderReadOnlyTable(child_rows));
-											d.fields_dict.payment_entries_html.$wrapper.html(renderPaymentEntriesTable(payment_entries));
-										}
-									});
-								}
-							},
-							{ fieldtype: "HTML", fieldname: "child_table_html", options: renderReadOnlyTable(child_rows) },
-							{ fieldtype: "HTML", fieldname: "payment_entries_html", options: renderPaymentEntriesTable(payment_entries) }
-						],
-						primary_action_label: "Close",
-						primary_action() { d.hide(); },
-						secondary_action_label: "Edit",
-						secondary_action() {
-							d.set_df_property("total_amount_paid", "read_only", 0);
-							d.set_df_property("total_amount_remaining", "read_only", 0);
-							d.refresh_fields(["total_amount_paid", "total_amount_remaining"]);
-							const $wrap = d.fields_dict.child_table_html.$wrapper;
-							$wrap.html(renderEditableTable(child_rows));
-
-							// Add/remove/save handlers
-							$wrap.off("click", ".add-row").on("click", ".add-row", function () {
-								$wrap.find(".edit-table tbody").append(`
-									<tr>
-										<td><input type="date" class="form-control" data-field="transaction_date"></td>
-										<td><input type="number" class="form-control" data-field="paid" value="0"></td>
-										<td><input type="number" class="form-control" data-field="paid_amount" value="0"></td>
-										<td><button class="btn btn-danger btn-sm remove-row">Remove</button></td>
-									</tr>
-								`);
-							});
-							$wrap.off("click", ".remove-row").on("click", ".remove-row", function () { $(this).closest("tr").remove(); });
-
-							$wrap.off("click", ".save-edits").on("click", ".save-edits", function () {
-								let updated_rows = [];
-								$wrap.find(".edit-table tbody tr").each(function () {
-									let row = {};
-									$(this).find("input").each(function () {
-										row[$(this).data("field")] = $(this).val();
-									});
-									updated_rows.push(row);
-								});
-
-								let totals_payload = {
-									total_amount_paid: d.get_value("total_amount_paid"),
-									total_amount_remaining: d.get_value("total_amount_remaining")
-								};
-
-								frappe.call({
-									method: "cash_management.cash_management.page.payment_management.payment_management.update_tracker_child_table",
-									args: { tracker_name: tracker_name, rows: updated_rows, totals: totals_payload },
-									callback: function (res) {
-										if (!res.exc) {
-											frappe.msgprint("Tracker updated successfully");
-											d.hide();
-											loadData(); // refresh main table
-										}
-									}
-								});
-							});
-						}
-					});
-
-					// show dialog first so footer buttons are rendered
-					d.show();
-
-					// 🔑 Hide Edit if PR Remaining is 0
-					const prRemaining = totals.total_amount_remaining || 0;
-					if (prRemaining <= 0) {
-						try {
-							if (typeof d.get_secondary_btn === 'function') {
-								const $sec = d.get_secondary_btn();
-								if ($sec && $sec.length) {
-									$sec.hide();
-								}
-							}
-						} catch (e) {
-							// ignore
-						}
-
-						// fallback: find the button by text "Edit" (case-insensitive)
-						if (d.$wrapper && d.$wrapper.find) {
-							d.$wrapper.find('.modal-footer button').filter(function () {
-								return $(this).text().trim().toLowerCase() === 'edit';
-							}).hide();
-						}
-
-						// optional: add a short notice so user knows why editing is disabled
-						if (d.fields_dict && d.fields_dict.child_table_html) {
-							d.fields_dict.child_table_html.$wrapper.prepend(
-								'<div class="alert alert-info mb-2">Editing disabled because Purchase Request is paid off</div>'
-							);
-						}
-
-						console.log("PR Remaining = 0 → hiding Edit button");
+					if (!res.exc) {
+						frappe.show_alert({
+							message: `Budget updated to ${frappe.format(budget, { fieldtype: "Currency" })}`,
+							indicator: "green"
+						}, 3);
+						loadData();
+					} else {
+						frappe.msgprint("Failed to update budget");
 					}
 				}
 			});
@@ -521,10 +371,10 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
 		frappe.call({
 			method:
 				active_tab_doctype === "Invoice Released Memo"
-					? "cash_management.cash_management.page.payment_management.payment_management.get_payment_requester_entries"
+					? "cash_management.cash_management.page.payment_management_budget.payment_management_budget.get_payment_requester_entries"
 					: active_tab_doctype === "Sales Order"
-						? "cash_management.cash_management.page.payment_management.payment_management.get_payment_request_inward_entries"
-						: "cash_management.cash_management.page.payment_management.payment_management.get_payment_request_entries",
+						? "cash_management.cash_management.page.payment_management_budget.payment_management_budget.get_payment_request_inward_entries"
+						: "cash_management.cash_management.page.payment_management_budget.payment_management_budget.get_payment_request_entries",
 			args: {
 				filters: filters
 			},
@@ -532,8 +382,17 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
 			freeze_message: __("Loading data..."),
 			callback: function (r) {
 				if (r.message) {
+					// Calculate total budget (budget only)
+					const total_budget = r.message.reduce((sum, row) => {
+						return sum + (parseFloat(row.budget) || 0);
+					}, 0);
+					fg.set_value('budget', total_budget);
+					updateRemainingBudget();
+
 					renderTable(r.message);
 				} else {
+					fg.set_value('budget', 0);
+					updateRemainingBudget();
 					table_container.empty().html(`<div class="text-muted">No records found.</div>`);
 				}
 			}

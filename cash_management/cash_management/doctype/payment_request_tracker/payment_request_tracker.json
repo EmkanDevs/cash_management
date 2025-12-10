@@ -1,79 +1,86 @@
 {
- "actions": [],
- "allow_rename": 1,
- "creation": "2025-09-02 12:06:25.202820",
- "doctype": "DocType",
- "engine": "InnoDB",
- "field_order": [
-  "payment_request",
-  "payment_requester",
-  "payment_request_details",
-  "payment_entry",
-  "total_amount_paid",
-  "total_amount_remaining"
- ],
- "fields": [
-  {
-   "fieldname": "payment_request",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Payment Request",
-   "options": "Payment Request"
-  },
-  {
-   "fieldname": "payment_request_details",
-   "fieldtype": "Table",
-   "label": "Payment Request Details",
-   "options": "Payment Request Details"
-  },
-  {
-   "fieldname": "payment_entry",
-   "fieldtype": "Link",
-   "label": "Payment Entry",
-   "options": "Payment Entry"
-  },
-  {
-   "fieldname": "total_amount_paid",
-   "fieldtype": "Currency",
-   "label": "Total Amount Paid"
-  },
-  {
-   "fieldname": "total_amount_remaining",
-   "fieldtype": "Currency",
-   "label": "Total Amount Remaining"
-  },
-  {
-   "fieldname": "payment_requester",
-   "fieldtype": "Link",
-   "label": "Payment Requester",
-   "options": "Payment Requester"
-  }
- ],
- "grid_page_length": 50,
- "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2025-10-14 08:11:10.272050",
- "modified_by": "Administrator",
- "module": "Cash Management",
- "name": "Payment Request Tracker",
- "owner": "Administrator",
- "permissions": [
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "share": 1,
-   "write": 1
-  }
- ],
- "row_format": "Dynamic",
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": []
+    "actions": [],
+    "allow_rename": 1,
+    "creation": "2025-09-02 12:06:25.202820",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "payment_request",
+        "payment_requester",
+        "budget",
+        "payment_request_details",
+        "payment_entry",
+        "total_amount_paid",
+        "total_amount_remaining"
+    ],
+    "fields": [
+        {
+            "fieldname": "payment_request",
+            "fieldtype": "Link",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "label": "Payment Request",
+            "options": "Payment Request"
+        },
+        {
+            "fieldname": "budget",
+            "fieldtype": "Currency",
+            "in_list_view": 1,
+            "label": "Budget"
+        },
+        {
+            "fieldname": "payment_request_details",
+            "fieldtype": "Table",
+            "label": "Payment Request Details",
+            "options": "Payment Request Details"
+        },
+        {
+            "fieldname": "payment_entry",
+            "fieldtype": "Link",
+            "label": "Payment Entry",
+            "options": "Payment Entry"
+        },
+        {
+            "fieldname": "total_amount_paid",
+            "fieldtype": "Currency",
+            "label": "Total Amount Paid"
+        },
+        {
+            "fieldname": "total_amount_remaining",
+            "fieldtype": "Currency",
+            "label": "Total Amount Remaining"
+        },
+        {
+            "fieldname": "payment_requester",
+            "fieldtype": "Link",
+            "label": "Payment Requester",
+            "options": "Payment Requester"
+        }
+    ],
+    "grid_page_length": 50,
+    "index_web_pages_for_search": 1,
+    "links": [],
+    "modified": "2025-10-14 08:11:10.272050",
+    "modified_by": "Administrator",
+    "module": "Cash Management",
+    "name": "Payment Request Tracker",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "row_format": "Dynamic",
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": []
 }

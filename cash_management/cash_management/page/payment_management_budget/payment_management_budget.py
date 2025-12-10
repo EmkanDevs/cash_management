@@ -1,7 +1,24 @@
 import frappe
+import json
+from erpnext.accounts.doctype.payment_request.payment_request import make_payment_entry
+from frappe import _
+from frappe.utils.jinja import render_template
+
 
 @frappe.whitelist()
-def get_payment_request_entries(payment_request=None, supplier=None, purchase_order=None, from_date=None, to_date=None, only_fully_paid: bool | None = None,only_unpaid: bool | None = None, reference_doctype=None, reference_name=None):
+def get_payment_request_entries(filters=None):
+    filters = json.loads(filters) if filters else {}
+    
+    payment_request = filters.get("payment_request")
+    supplier = filters.get("supplier")
+    purchase_order = filters.get("reference_name")  # For backward compatibility
+    from_date = filters.get("from_date")
+    to_date = filters.get("to_date")
+    only_fully_paid = int(filters.get("only_fully_paid") or 0)
+    only_unpaid = int(filters.get("only_unpaid") or 0)
+    reference_doctype = filters.get("reference_doctype")
+    reference_name = filters.get("reference_name")
+    
     results = []
 
     # build filters for Payment Request
@@ -58,7 +75,7 @@ def get_payment_request_entries(payment_request=None, supplier=None, purchase_or
         tracker = frappe.db.get_value(
             "Payment Request Tracker",
             {"payment_request": pr["name"]},
-            ["name", "payment_entry", "total_amount_paid", "total_amount_remaining"],
+            ["name", "payment_entry", "total_amount_paid", "total_amount_remaining", "budget"],
             as_dict=True,
         )
 
@@ -193,43 +210,44 @@ def get_payment_request_entries(payment_request=None, supplier=None, purchase_or
                 "total_amount_paid": effective_paid,
                 "total_amount_remaining": computed_remaining,
                 "po_grand_total": po_grand_total,
-                "po_remaining": po_remaining
+                "po_remaining": po_remaining,
+                "budget": tracker["budget"] if tracker else None
             }
         )
 
     return results
 
 @frappe.whitelist()
-def get_payment_requester_entries(
-    payment_requester=None,
-    supplier=None,
-    invoice_released_memo=None,
-    from_date=None,
-    to_date=None,
-    only_fully_paid: bool | None = None,
-    only_unpaid: bool | None = None,
-    reference_doctype=None,
-    reference_name=None,
-):
-    """Fetch Payment Requester records (similar to get_payment_request_entries but for Invoice Released Memo)."""
+def get_payment_requester_entries(filters=None):
+    filters = json.loads(filters) if filters else {}
+
+    payment_requester = filters.get("payment_request")
+    supplier = filters.get("supplier")
+    invoice_released_memo = filters.get("reference_name")
+    from_date = filters.get("from_date")
+    to_date = filters.get("to_date")
+    only_fully_paid = int(filters.get("only_fully_paid") or 0)
+    only_unpaid = int(filters.get("only_unpaid") or 0)
+    reference_doctype = filters.get("reference_doctype")
+    reference_name = filters.get("reference_name")
     results = []
 
-    # 1️⃣ Build filters for Payment Requester
-    prq_filters = {}
-    if payment_requester:
-        prq_filters["name"] = ["like", f"%{payment_requester}%"]
-    if supplier:
-        prq_filters["party_type"] = "Supplier"
-    if invoice_released_memo:
-        prq_filters["reference_doctype"] = "Invoice released Memo"
-        prq_filters["reference_name"] = ["like", f"%{invoice_released_memo}%"]
+    # 🧠 Convert string "0"/"1" to bool (from JS frontend)
+    # only_fully_paid = bool(int(only_fully_paid)) if only_fully_paid not in (None, "", False) else False
+    # only_unpaid = bool(int(only_unpaid)) if only_unpaid not in (None, "", False) else False
 
-    # Support Reference Doctype + Name filters
+    # 1️⃣ Build base filters
+    prq_filters = {}
     if reference_doctype:
         prq_filters["reference_doctype"] = reference_doctype
-    if reference_name:
+    if payment_requester:
+        prq_filters["name"] = ["like", f"%{payment_requester}%"]
+    if invoice_released_memo:
+        prq_filters["reference_name"] = ["like", f"%{invoice_released_memo}%"]
+    elif reference_name:
         prq_filters["reference_name"] = ["like", f"%{reference_name}%"]
 
+    # Date filters
     if from_date and to_date:
         prq_filters["transaction_date"] = ["between", [from_date, to_date]]
     elif from_date:
@@ -237,7 +255,7 @@ def get_payment_requester_entries(
     elif to_date:
         prq_filters["transaction_date"] = ["<=", to_date]
 
-    # 2️⃣ Fetch Payment Requester records
+    # 2️⃣ Fetch base records
     payment_requesters = frappe.db.get_values(
         "Payment Requester",
         prq_filters,
@@ -255,107 +273,189 @@ def get_payment_requester_entries(
         as_dict=True,
     )
 
-    # 3️⃣ Iterate and enrich with related info
+    # 3️⃣ Enrich and filter
     for prq in payment_requesters:
-        # Match supplier filter (if applicable)
-        if supplier and prq.get("party_type") == "Supplier":
-            supplier_l = supplier.lower()
-            party_name_l = (prq.get("party_name") or "").lower()
-            party_id_l = (prq.get("party") or "").lower()
-            if supplier_l not in party_name_l and supplier_l not in party_id_l:
-                continue
-
-        # Find related Payment Requester Tracker (if exists)
-        tracker = frappe.db.get_value(
-            "Payment Requester Tracker",
-            {"payment_requester": prq["name"]},
-            ["name", "payment_entry", "total_amount_paid", "total_amount_remaining"],
-            as_dict=True,
-        )
-
         supplier_name = None
         supplier_id = None
         payment_terms_value = None
-        ref_dt = prq.get("reference_doctype")
-        ref_dn = prq.get("reference_name")
 
         if prq.get("party_type") == "Supplier":
             supplier_id = prq.get("party")
             supplier_name = prq.get("party_name") or prq.get("party")
 
-        # Attempt to extract payment terms from referenced Invoice Released Memo
-        if ref_dt and ref_dn:
+        ref_dn = prq.get("reference_name")
+        if prq["reference_doctype"] == "Invoice released Memo" and ref_dn:
             try:
-                if ref_dt == "Invoice released Memo":
-                    irm_doc = frappe.get_doc("Invoice released Memo", ref_dn)
-                    if getattr(irm_doc, "payment_terms_template", None):
-                        payment_terms_value = irm_doc.payment_terms_template
-                    elif getattr(irm_doc, "payment_terms", None):
-                        payment_terms_value = irm_doc.payment_terms
-                else:
-                    ref_doc_vals = frappe.db.get_value(
-                        ref_dt,
-                        ref_dn,
-                        ["payment_terms_template", "payment_terms"],
-                        as_dict=True,
-                    )
-                    if ref_doc_vals:
-                        payment_terms_value = (
-                            ref_doc_vals.get("payment_terms_template")
-                            or ref_doc_vals.get("payment_terms")
-                        )
-            except Exception:
-                pass
+                irm_doc = frappe.get_doc("Invoice released Memo", ref_dn)
+                payment_terms_value = getattr(irm_doc, "payment_terms_template", None) or getattr(
+                    irm_doc, "payment_terms", None
+                )
+            except frappe.DoesNotExistError:
+                frappe.log_error(f"{prq['reference_doctype']} {ref_dn} not found", "Payment Requester Fetch")
+            except Exception as e:
+                frappe.log_error(f"Error reading {ref_dn}: {str(e)}", "Payment Requester Fetch")
 
-        # 4️⃣ Compute paid amount (from Payment Entry)
-        prq_grand_total = float(prq.get("grand_total") or 0)
-        paid_from_entries = 0.0
-        try:
-            paid_sql = frappe.db.sql(
-                """
-                SELECT COALESCE(SUM(pe.paid_amount), 0)
-                FROM `tabPayment Entry` pe
-                WHERE pe.docstatus = 1
-                AND pe.reference_no = %s
-                """,
-                (prq["name"],),
-            )
-            if paid_sql and paid_sql[0] and paid_sql[0][0] is not None:
-                paid_from_entries = float(paid_sql[0][0] or 0)
-        except Exception:
-            paid_from_entries = 0.0
+        # Payment tracker
+        tracker = frappe.db.get_value(
+            "Payment Request Tracker",
+            {"payment_requester": prq["name"]},
+            ["name", "payment_entry", "total_amount_paid", "total_amount_remaining", "budget"],
+            as_dict=True,
+        )
 
-        # Tracker fallback
-        tracker_paid = float(tracker["total_amount_paid"]) if tracker and tracker.get("total_amount_paid") else 0.0
+        grand_total = float(prq.get("grand_total") or 0)
+        total_paid = float(tracker["total_amount_paid"]) if tracker else 0.0
+        remaining = float(tracker["total_amount_remaining"]) if tracker else (grand_total - total_paid)
+        remaining = max(0.0, remaining)
+
+        # 4️⃣ Filter logic
+        if only_fully_paid and remaining != 0:
+            continue  # Show only fully paid
+        if only_unpaid and remaining <= 0:
+            continue  # Show only unpaid
+
+        results.append({
+            "payment_request": prq["name"],
+            "grand_total": grand_total,
+            "reference_doctype": prq["reference_doctype"],
+            "reference_name": prq["reference_name"],
+            "supplier_name": supplier_name,
+            "supplier_id": supplier_id,
+            "payment_terms": payment_terms_value,
+            "transaction_date": prq.get("transaction_date"),
+            "tracker": tracker["name"] if tracker else None,
+            "payment_entry": tracker["payment_entry"] if tracker else None,
+            "total_amount_paid": total_paid,
+            "total_amount_remaining": remaining,
+            "po_grand_total": grand_total,
+            "po_remaining": remaining,
+            "budget": tracker["budget"] if tracker else None
+        })
+
+    return results
+
+
+@frappe.whitelist()
+def get_payment_request_inward_entries(**kwargs):
+    """
+    Fetch inward Payment Requests (Customer Receipts) with tracker & payment details.
+    Mirrors outward logic but restricted to payment_request_type = 'Inward'.
+    """
+
+    filters = kwargs.get("filters") or {}
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+
+    results = []
+
+    payment_request = filters.get("payment_request")
+    supplier = filters.get("supplier")
+    from_date = filters.get("from_date")
+    to_date = filters.get("to_date")
+    only_fully_paid = filters.get("only_fully_paid")
+    only_unpaid = filters.get("only_unpaid")
+    reference_doctype = filters.get("reference_doctype")
+    reference_name = filters.get("reference_name")
+
+    # 🔹 Base filters
+    pr_filters = {"payment_request_type": "Inward", "docstatus": 1}
+
+    if payment_request:
+        pr_filters["name"] = ["like", f"%{payment_request}%"]
+    if supplier:
+        # inward means customer
+        pr_filters["party_name"] = ["like", f"%{supplier}%"]
+    if reference_doctype:
+        pr_filters["reference_doctype"] = reference_doctype
+    if reference_name:
+        pr_filters["reference_name"] = ["like", f"%{reference_name}%"]
+    if from_date and to_date:
+        pr_filters["transaction_date"] = ["between", [from_date, to_date]]
+    elif from_date:
+        pr_filters["transaction_date"] = [">=", from_date]
+    elif to_date:
+        pr_filters["transaction_date"] = ["<=", to_date]
+
+    # 🔹 Fetch Payment Requests
+    payment_requests = frappe.db.get_values(
+        "Payment Request",
+        pr_filters,
+        [
+            "name",
+            "grand_total",
+            "reference_doctype",
+            "reference_name",
+            "party_type",
+            "party",
+            "party_name",
+            "transaction_date",
+            "status",  # ✅ Added this
+        ],
+        order_by="transaction_date desc",
+        as_dict=True,
+    )
+
+    for pr in payment_requests:
+        # 🔹 Tracker info (if exists)
+        tracker = frappe.db.get_value(
+            "Payment Request Tracker",
+            {"payment_request": pr["name"]},
+            ["name", "payment_entry", "total_amount_paid", "total_amount_remaining", "budget"],
+            as_dict=True,
+        )
+
+        # 🔹 Compute paid from Payment Entry (if linked)
+        pr_grand_total = float(pr.get("grand_total") or 0)
+        paid_from_entries = frappe.db.sql(
+            """
+            SELECT COALESCE(SUM(pe.paid_amount), 0)
+            FROM `tabPayment Entry` pe
+            WHERE pe.docstatus = 1
+            AND pe.reference_no = %s
+            """,
+            (pr["name"],),
+        )[0][0] or 0.0
+
+        tracker_paid = (
+            float(tracker["total_amount_paid"])
+            if tracker and tracker.get("total_amount_paid") is not None
+            else 0.0
+        )
+
         effective_paid = paid_from_entries if paid_from_entries > 0 else tracker_paid
-        computed_remaining = max(0.0, prq_grand_total - effective_paid)
+        computed_remaining = max(0.0, pr_grand_total - effective_paid)
 
-        # Filter by payment status if needed
+        # ✅ New Logic: If Payment Request status is "Paid", force remaining to 0
+        if pr.get("status") == "Paid":
+            computed_remaining = 0.0
+
+        # 🔹 Filter by paid/unpaid if checkbox active
         if only_fully_paid and computed_remaining > 0:
             continue
         if only_unpaid and computed_remaining == 0:
             continue
 
-        # 5️⃣ Add final result row
         results.append(
             {
-                "payment_requester": prq["name"],
-                "grand_total": prq["grand_total"],
-                "reference_doctype": ref_dt,
-                "reference_name": ref_dn,
-                "supplier_name": supplier_name,
-                "supplier_id": supplier_id,
-                "payment_terms": payment_terms_value,
-                "transaction_date": prq.get("transaction_date"),
+                "payment_request": pr["name"],
+                "grand_total": pr["grand_total"],
+                "reference_doctype": pr.get("reference_doctype"),
+                "reference_name": pr.get("reference_name"),
+                "supplier_name": pr.get("party_name"),   # ← Customer in this case
+                "supplier_id": pr.get("party"),
+                "payment_terms": None,
+                "transaction_date": pr.get("transaction_date"),
                 "tracker": tracker["name"] if tracker else None,
                 "payment_entry": tracker["payment_entry"] if tracker else None,
                 "total_amount_paid": effective_paid,
                 "total_amount_remaining": computed_remaining,
+                "po_grand_total": None,
+                "po_remaining": None,
+                "budget": tracker["budget"] if tracker else None
             }
         )
 
     return results
-
 
 @frappe.whitelist()
 def get_tracker_child_table(tracker_name):
@@ -417,8 +517,6 @@ def get_tracker_child_table(tracker_name):
 
 @frappe.whitelist()
 def update_tracker_child_table(tracker_name, rows, totals=None):
-    import json
-    from erpnext.accounts.doctype.payment_request.payment_request import make_payment_entry
 
     rows = json.loads(rows) if isinstance(rows, str) else rows
     totals = json.loads(totals)
@@ -428,15 +526,12 @@ def update_tracker_child_table(tracker_name, rows, totals=None):
 
     tracker_doc = frappe.get_doc("Payment Request Tracker", tracker_name)
 
-    # Update totals if provided
     if totals:
         tracker_doc.total_amount_paid = totals.get("total_amount_paid")
         tracker_doc.total_amount_remaining = totals.get("total_amount_remaining")
 
-    # Reset child table
     tracker_doc.set("payment_request_details", [])
 
-    # Add updated child rows & create Payment Entries
     for r in rows:
         paid_amount = float(r.get("paid_amount") or 0)
         tracker_doc.append("payment_request_details", {
@@ -446,7 +541,6 @@ def update_tracker_child_table(tracker_name, rows, totals=None):
             "unpaid_amount": max(0.0, grand_total - paid_amount)
         })
 
-        # 🔑 Create Payment Entry for each paid_amount
         if paid_amount > 0 and tracker_doc.payment_request:
             try:
                 pe_doc = make_payment_entry(tracker_doc.payment_request)
@@ -462,17 +556,24 @@ def update_tracker_child_table(tracker_name, rows, totals=None):
                 if pe_doc.references and len(pe_doc.references) > 0:
                     pe_doc.references[0].allocated_amount = paid_amount
 
-                # Link back to PR for traceability
                 pe_doc.reference_no = tracker_doc.payment_request
                 pe_doc.name = None
 
                 pe_doc.insert(ignore_permissions=True)
                 frappe.db.commit()
+
             except Exception as e:
                 frappe.db.rollback()
-                frappe.log_error(f"Payment Entry creation failed for {tracker_doc.payment_request}: {str(e)}")
 
-    # Save tracker after processing all rows
+                frappe.log_error(frappe.get_traceback(), f"Payment Entry creation failed for {tracker_doc.payment_request}")
+
+                error_text = str(e)
+                if "Allocated Amount cannot be greater" in error_text:
+                    frappe.throw(_("Payment Entry creation failed for {0}. Please check Error Log for details.").format(tracker_doc.payment_request))
+                else:
+                    frappe.throw(_("Payment Entry creation failed for {0}. Please check Error Log for details.").format(tracker_doc.payment_request))
+
+
     tracker_doc.save(ignore_permissions=True)
     frappe.db.commit()
 
@@ -485,3 +586,67 @@ def update_paid_amount(payment_entry, paid_amount):
     pe.save(ignore_permissions=True)
     frappe.db.commit()
     return {"status": "success", "message": f"Updated {payment_entry} with Paid Amount {paid_amount}"}
+
+@frappe.whitelist()
+def update_tracker_budget(tracker_name, budget):
+    """Update the budget field in Payment Request Tracker"""
+    tracker = frappe.get_doc("Payment Request Tracker", tracker_name)
+    tracker.budget = float(budget) if budget else 0.0
+    tracker.save(ignore_permissions=True)
+    frappe.db.commit()
+    return {"status": "success", "message": f"Updated budget for {tracker_name}"}
+
+@frappe.whitelist()
+def process_email_notification():
+    """
+    Sends email notification to all users who have roles enabled in 'Cash Management Budget'.
+    """
+    # Get enabled roles from Cash Management Budget
+    cmb = frappe.get_single("Cash Management Budget")
+    roles = []
+    
+    if cmb.role_permission_for_notification:
+        for d in cmb.role_permission_for_notification:
+            if d.enable:
+                roles.append(d.role)
+    
+    if not roles:
+        frappe.msgprint(_("No enabled roles found in 'Cash Management Budget'."))
+        return
+
+    # Get users with these roles
+    users = set()
+    for role in roles:
+        # Get users who have this role and are enabled
+        role_users = frappe.db.sql("""
+            SELECT parent FROM `tabHas Role` 
+            WHERE role=%s AND parenttype='User' 
+            AND parent IN (SELECT name FROM `tabUser` WHERE enabled=1)
+        """, (role,), pluck=True)
+        users.update(role_users)
+        
+    if not users:
+        frappe.msgprint(_("No active users found for the enabled roles."))
+        return
+
+    subject = _("Cash Management Budget Notification")
+    message = _("Please check the Cash Management Budget page for updates.")
+    
+    sent_count = 0
+    for user_email in users:
+        try:
+            frappe.sendmail(
+                recipients=[user_email],
+                subject=subject,
+                message=message,
+                reference_doctype="Cash Management Budget",
+                reference_name=cmb.name
+            )
+            sent_count += 1
+        except Exception as e:
+            frappe.log_error(f"Failed to send notification to {user_email}: {str(e)}")
+            
+    if sent_count > 0:
+        frappe.msgprint(f"Email sent to {sent_count} users successfully.", indicator='green')
+    else:
+        frappe.msgprint("Failed to send emails. Check Error Log.", indicator='red')

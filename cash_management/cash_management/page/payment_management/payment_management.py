@@ -4,7 +4,19 @@ from erpnext.accounts.doctype.payment_request.payment_request import make_paymen
 from frappe import _
 
 @frappe.whitelist()
-def get_payment_request_entries(payment_request=None, supplier=None, purchase_order=None, from_date=None, to_date=None, only_fully_paid: bool | None = None,only_unpaid: bool | None = None, reference_doctype=None, reference_name=None):
+def get_payment_request_entries(filters=None):
+    filters = json.loads(filters) if filters else {}
+    
+    payment_request = filters.get("payment_request")
+    supplier = filters.get("supplier")
+    purchase_order = filters.get("reference_name")  # For backward compatibility
+    from_date = filters.get("from_date")
+    to_date = filters.get("to_date")
+    only_fully_paid = int(filters.get("only_fully_paid") or 0)
+    only_unpaid = int(filters.get("only_unpaid") or 0)
+    reference_doctype = filters.get("reference_doctype")
+    reference_name = filters.get("reference_name")
+    
     results = []
 
     # build filters for Payment Request
@@ -61,7 +73,7 @@ def get_payment_request_entries(payment_request=None, supplier=None, purchase_or
         tracker = frappe.db.get_value(
             "Payment Request Tracker",
             {"payment_request": pr["name"]},
-            ["name", "payment_entry", "total_amount_paid", "total_amount_remaining"],
+            ["name", "payment_entry", "total_amount_paid", "total_amount_remaining", "budget"],
             as_dict=True,
         )
 
@@ -196,7 +208,8 @@ def get_payment_request_entries(payment_request=None, supplier=None, purchase_or
                 "total_amount_paid": effective_paid,
                 "total_amount_remaining": computed_remaining,
                 "po_grand_total": po_grand_total,
-                "po_remaining": po_remaining
+                "po_remaining": po_remaining,
+                "budget": tracker["budget"] if tracker else None
             }
         )
 
@@ -284,7 +297,7 @@ def get_payment_requester_entries(filters=None):
         tracker = frappe.db.get_value(
             "Payment Request Tracker",
             {"payment_requester": prq["name"]},
-            ["name", "payment_entry", "total_amount_paid", "total_amount_remaining"],
+            ["name", "payment_entry", "total_amount_paid", "total_amount_remaining", "budget"],
             as_dict=True,
         )
 
@@ -313,7 +326,8 @@ def get_payment_requester_entries(filters=None):
             "total_amount_paid": total_paid,
             "total_amount_remaining": remaining,
             "po_grand_total": grand_total,
-            "po_remaining": remaining
+            "po_remaining": remaining,
+            "budget": tracker["budget"] if tracker else None
         })
 
     return results
@@ -384,7 +398,7 @@ def get_payment_request_inward_entries(**kwargs):
         tracker = frappe.db.get_value(
             "Payment Request Tracker",
             {"payment_request": pr["name"]},
-            ["name", "payment_entry", "total_amount_paid", "total_amount_remaining"],
+            ["name", "payment_entry", "total_amount_paid", "total_amount_remaining", "budget"],
             as_dict=True,
         )
 
@@ -435,6 +449,7 @@ def get_payment_request_inward_entries(**kwargs):
                 "total_amount_remaining": computed_remaining,
                 "po_grand_total": None,
                 "po_remaining": None,
+                "budget": tracker["budget"] if tracker else None
             }
         )
 
