@@ -1,0 +1,298 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:HR-PAY-YY-{####}",
+ "creation": "2025-12-03 15:06:05.477096",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "request_type_section",
+  "created_date",
+  "start_period",
+  "column_break_xyyu",
+  "payment_category",
+  "end_period",
+  "column_break_brjc",
+  "category_classification",
+  "payment_due_date",
+  "section_break_pdpo",
+  "project",
+  "column_break_frfh",
+  "sector",
+  "scope",
+  "department",
+  "section",
+  "location",
+  "cost_center",
+  "section_break_meuz",
+  "remark",
+  "staffemployees_section",
+  "our_employees",
+  "rental_employees",
+  "section_break_zlxq",
+  "sadad_no",
+  "payment_to",
+  "amended_from",
+  "column_break_ypwc",
+  "amount",
+  "payment_to_name",
+  "column_break_rzio",
+  "payment_status",
+  "payment_to_arabic",
+  "payment_requester",
+  "section_break_your",
+  "extra_amount_to_deducted_on_the_employee"
+ ],
+ "fields": [
+  {
+   "fieldname": "request_type_section",
+   "fieldtype": "Section Break",
+   "label": "Request Type:"
+  },
+  {
+   "default": "Today",
+   "fieldname": "created_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Created Date"
+  },
+  {
+   "fieldname": "start_period",
+   "fieldtype": "Date",
+   "label": "Start Period"
+  },
+  {
+   "fieldname": "column_break_xyyu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payment_category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Payment Category",
+   "options": "\nIqama Renewal\nIqama Transfer\nWork Permit\nVacation Settlement\nTermination/Exit Settlement\nTickets\nBusiness Trip Allowance\nRe-Entry Visa\nMedical For New Employees\nCash Allowance For New Employees\nSubscriptions/Government Fees\nCash Salary"
+  },
+  {
+   "fieldname": "end_period",
+   "fieldtype": "Date",
+   "label": "End Period"
+  },
+  {
+   "fieldname": "column_break_brjc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "category_classification",
+   "fieldtype": "Data",
+   "label": "Category Classification"
+  },
+  {
+   "fieldname": "payment_due_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Payment Due Date"
+  },
+  {
+   "fieldname": "section_break_pdpo",
+   "fieldtype": "Section Break",
+   "label": "Accounting Dimensions:"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Project",
+   "options": "Project"
+  },
+  {
+   "fieldname": "column_break_frfh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Location",
+   "options": "Location"
+  },
+  {
+   "fieldname": "section_break_meuz",
+   "fieldtype": "Section Break",
+   "label": "Date/Period:"
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "Remark"
+  },
+  {
+   "fieldname": "staffemployees_section",
+   "fieldtype": "Section Break",
+   "label": "Internal/External Staff:"
+  },
+  {
+   "fieldname": "our_employees",
+   "fieldtype": "Table",
+   "label": "Our Employees",
+   "options": "HR Payment Required Employees"
+  },
+  {
+   "fieldname": "rental_employees",
+   "fieldtype": "Table",
+   "label": "Rental Employees",
+   "options": "HR Payment Required Rental"
+  },
+  {
+   "fieldname": "section_break_zlxq",
+   "fieldtype": "Section Break",
+   "label": "Payment Method:"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "sadad_no",
+   "fieldtype": "Int",
+   "in_standard_filter": 1,
+   "label": "Sadad No"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "HR Payment Required",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_ypwc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount"
+  },
+  {
+   "fieldname": "column_break_rzio",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Unpaid",
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Payment Status",
+   "options": "\nUnpaid\nPaid\nCanceled"
+  },
+  {
+   "fieldname": "payment_requester",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Payment Requester",
+   "options": "Payment Requester"
+  },
+  {
+   "fieldname": "payment_to",
+   "fieldtype": "Link",
+   "label": "Payment To",
+   "options": "Supplier"
+  },
+  {
+   "fetch_from": "payment_to.supplier_name",
+   "fieldname": "payment_to_name",
+   "fieldtype": "Data",
+   "label": "Payment To Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "payment_to.supplier_name_in_arabic",
+   "fieldname": "payment_to_arabic",
+   "fieldtype": "Data",
+   "label": "Payment To Arabic",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sector",
+   "fieldtype": "Link",
+   "label": "Sector",
+   "options": "Sector"
+  },
+  {
+   "fieldname": "scope",
+   "fieldtype": "Data",
+   "label": "Scope"
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department"
+  },
+  {
+   "fieldname": "section",
+   "fieldtype": "Data",
+   "label": "Section"
+  },
+  {
+   "fieldname": "section_break_your",
+   "fieldtype": "Section Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "extra_amount_to_deducted_on_the_employee",
+   "fieldtype": "Table",
+   "label": "Extra Amount to Deducted on the Employee",
+   "options": "Extra Amount  Employee Details"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [
+  {
+   "link_doctype": "Payment Requester",
+   "link_fieldname": "hr_payment_required"
+  }
+ ],
+ "modified": "2025-12-10 11:27:46.731790",
+ "modified_by": "Administrator",
+ "module": "Cash Management",
+ "name": "HR Payment Required",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
