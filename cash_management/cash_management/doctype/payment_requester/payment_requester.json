@@ -38,7 +38,13 @@
   "cost_center",
   "column_break_amxm",
   "project",
-  "hr_payment_required"
+  "sector",
+  "hr_payment_required",
+  "public_relation_payment_required",
+  "scope",
+  "department",
+  "section",
+  "region_location"
  ],
  "fields": [
   {
@@ -229,13 +235,49 @@
    "fieldtype": "Data",
    "hidden": 1,
    "label": "HR Payment Required"
+  },
+  {
+   "fieldname": "sector",
+   "fieldtype": "Link",
+   "label": "Sector",
+   "options": "Sector"
+  },
+  {
+   "fieldname": "scope",
+   "fieldtype": "Link",
+   "label": "Scope",
+   "options": "Scope"
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department"
+  },
+  {
+   "fieldname": "region_location",
+   "fieldtype": "Link",
+   "label": "Region Location",
+   "options": "Location"
+  },
+  {
+   "fieldname": "public_relation_payment_required",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Public Relation Payment Required"
+  },
+  {
+   "fieldname": "section",
+   "fieldtype": "Link",
+   "label": "Section",
+   "options": "Section"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-12-05 15:38:55.166041",
+ "modified": "2025-12-11 08:53:01.771965",
  "modified_by": "Administrator",
  "module": "Cash Management",
  "name": "Payment Requester",

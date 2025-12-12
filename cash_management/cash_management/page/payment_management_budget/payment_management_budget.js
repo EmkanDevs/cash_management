@@ -34,7 +34,7 @@ frappe.pages['payment-management-budget'].on_page_load = function (wrapper) {
 		from_date: '',
 		to_date: '',
 		only_fully_paid: 0,
-		only_unpaid: 0
+		only_unpaid: 1
 	};
 
 	// 🔹 Report shortcut button
@@ -63,13 +63,35 @@ frappe.pages['payment-management-budget'].on_page_load = function (wrapper) {
 	const table_container = $("<div class='purchase-receipt-tra-table'></div>").appendTo(page.main);
 
 	// 🔹 Refresh button
+	// page.add_inner_button(__('Refresh'), function () {
+	// 	Object.keys(filters).forEach(k => {
+	// 		if (typeof filters[k] === 'number') filters[k] = 0;
+	// 		else filters[k] = '';
+	// 	});
+	// 	loadData();
+	// });
+	// 🔹 Refresh button
 	page.add_inner_button(__('Refresh'), function () {
 		Object.keys(filters).forEach(k => {
-			if (typeof filters[k] === 'number') filters[k] = 0;
-			else filters[k] = '';
+			if (k === 'only_unpaid') {
+				filters[k] = 1;  
+			} else if (k === 'only_fully_paid') {
+				filters[k] = 0;  
+			} else if (typeof filters[k] === 'number') {
+				filters[k] = 0;
+			} else {
+				filters[k] = '';
+			}
 		});
+		
+		if (fg && fg.fields_dict && fg.fields_dict.only_unpaid) {
+			fg.fields_dict.only_unpaid.set_value(1);
+			fg.fields_dict.only_fully_paid.set_value(0);
+		}
+		
 		loadData();
 	});
+
 
 	// 🔹 Send Notification button
 	page.add_inner_button(__('Send Notification'), function () {
@@ -83,6 +105,11 @@ frappe.pages['payment-management-budget'].on_page_load = function (wrapper) {
 				}
 			});
 		});
+	});
+
+	// 🔹 Go to Payment Management button
+	page.add_inner_button(__('Go to Payment Requests and Trackers'), function () {
+		frappe.set_route('payment-management');
 	});
 
 	// 🔹 FieldGroup creation
@@ -156,9 +183,26 @@ frappe.pages['payment-management-budget'].on_page_load = function (wrapper) {
 	// Update internal filters
 	filters.from_date = week_ago;
 	filters.to_date = today;
+	filters.only_unpaid = 1; // This matches the checkbox default
+	filters.only_fully_paid = 0;
+	Object.keys(filters).forEach(key => {
+	if (this.form.fields_dict[key]) {
+		const value = this.form.fields_dict[key].value;
+		if (value !== undefined) {
+			// For checkboxes, convert boolean to 1/0
+			if (key === 'only_fully_paid' || key === 'only_unpaid') {
+				filters[key] = value ? 1 : 0;
+			} else {
+				filters[key] = value || '';
+			}
+		}
+	}
+});
 
-	// ✅ Define fg AFTER make()
+	// 🔹 Define fg AFTER make()
 	const fg = this.form;
+	loadData();
+
 
 	// 🔹 Hook up onchange handlers safely
 	if (fg.fields_dict.payment_request) {
@@ -296,10 +340,15 @@ frappe.pages['payment-management-budget'].on_page_load = function (wrapper) {
 				: "NA";
 
 			// Budget input field
-			const budgetValue = row.budget || row.po_grand_total || 0;
+			const budgetValue = row.budget || row.po_remaining || 0;
+			// 🧠 Important: Load logic sums (row.budget || 0). If row.budget is falsy, it contributes 0 to the total.
+			// We must track this original contribution to perform differential updates correctly.
+			const originalBudgetContribution = row.budget || 0;
+
 			const budgetInput = row.tracker
 				? `<input type="number" class="form-control budget-input" 
-						data-tracker="${row.tracker}" 
+						data-tracker="${row.tracker}"
+						data-original-budget="${originalBudgetContribution}" 
 						value="${budgetValue}" 
 						style="width:150px;">`
 				: "NA";
@@ -346,18 +395,39 @@ frappe.pages['payment-management-budget'].on_page_load = function (wrapper) {
 		$(table_container).off("change", ".budget-input").on("change", ".budget-input", function () {
 			const $input = $(this);
 			const tracker_name = $input.data("tracker");
-			const budget = parseFloat($input.val()) || 0;
+			const new_budget = parseFloat($input.val()) || 0;
+
+			// Get the previous contribution of this specific row to the total budget
+			// If it was never set (null in DB), it contributed 0.
+			const original_contribution = parseFloat($input.attr("data-original-budget")) || 0;
 
 			frappe.call({
 				method: "cash_management.cash_management.page.payment_management_budget.payment_management_budget.update_tracker_budget",
-				args: { tracker_name, budget },
+				args: { tracker_name, budget: new_budget },
 				callback: function (res) {
 					if (!res.exc) {
 						frappe.show_alert({
-							message: `Budget updated to ${frappe.format(budget, { fieldtype: "Currency" })}`,
+							message: `Budget updated to ${frappe.format(new_budget, { fieldtype: "Currency" })}`,
 							indicator: "green"
 						}, 3);
-						loadData();
+
+						// 🟢 OPTIMIZED: Differential Update
+						// Calculate difference: new value - what it previously contributed
+						const diff = new_budget - original_contribution;
+
+						// Update global budget
+						let current_total = parseFloat(fg.get_value('budget')) || 0;
+						let updated_total = current_total + diff;
+						fg.set_value('budget', updated_total);
+
+						// Update remaining budget
+						const target = parseFloat(fg.get_value('target_budget')) || 0;
+						fg.set_value('remaining_budget', target - updated_total);
+
+						// Update the 'original' attribute so subsequent changes calculate diff correctly against THIS new value
+						$input.attr("data-original-budget", new_budget);
+
+						// Removed loadData()
 					} else {
 						frappe.msgprint("Failed to update budget");
 					}

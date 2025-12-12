@@ -71,6 +71,11 @@ frappe.pages['payment-management'].on_page_load = function (wrapper) {
 		loadData();
 	});
 
+	// 🔹 Go to Cash Management Budget button
+	page.add_inner_button(__('Go to Cash Management Budget'), function () {
+		frappe.set_route('payment-management-budget');
+	});
+
 	// 🔹 FieldGroup creation
 	this.form = new frappe.ui.FieldGroup({
 		fields: [

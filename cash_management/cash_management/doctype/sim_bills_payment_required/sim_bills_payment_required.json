@@ -1,0 +1,235 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:SIM-PAY-YY-{####}",
+ "creation": "2025-12-10 17:13:03.211836",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "request_type_section",
+  "created_date",
+  "start_period",
+  "column_break_flvd",
+  "payment_category",
+  "end_period",
+  "column_break_u2ht",
+  "category_classification",
+  "payment_due_date",
+  "accounting_dimension_section",
+  "project",
+  "sector",
+  "scope",
+  "column_break_dtnn",
+  "cost_center",
+  "department",
+  "section",
+  "location",
+  "section_break_yeln",
+  "remark",
+  "accounting_dimensions_section",
+  "payment_to",
+  "bill_amount",
+  "amended_from",
+  "column_break_uzfx",
+  "payment_to_name",
+  "payment_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "SIM Bills Payment Required",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "request_type_section",
+   "fieldtype": "Section Break",
+   "label": "Request Type:"
+  },
+  {
+   "default": "Today",
+   "fieldname": "created_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Created Date"
+  },
+  {
+   "fieldname": "start_period",
+   "fieldtype": "Date",
+   "label": "Start Period"
+  },
+  {
+   "fieldname": "column_break_flvd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payment_category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Payment Category",
+   "options": "\nAlessa STC Bills\nSTC Bills\nMobily Bills"
+  },
+  {
+   "fieldname": "end_period",
+   "fieldtype": "Date",
+   "label": "End Period"
+  },
+  {
+   "fieldname": "column_break_u2ht",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "category_classification",
+   "fieldtype": "Data",
+   "label": "Category Classification"
+  },
+  {
+   "fieldname": "payment_due_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Payment Due Date"
+  },
+  {
+   "fieldname": "accounting_dimensions_section",
+   "fieldtype": "Section Break",
+   "label": "Payment Method:"
+  },
+  {
+   "fieldname": "payment_to",
+   "fieldtype": "Link",
+   "label": "Payment To",
+   "options": "Supplier"
+  },
+  {
+   "fetch_from": "payment_to.supplier_name",
+   "fieldname": "payment_to_name",
+   "fieldtype": "Data",
+   "label": "Payment To Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "Remark"
+  },
+  {
+   "fieldname": "accounting_dimension_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Dimensions:"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Project",
+   "options": "Project"
+  },
+  {
+   "fieldname": "sector",
+   "fieldtype": "Link",
+   "label": "Sector",
+   "options": "Sector"
+  },
+  {
+   "fieldname": "scope",
+   "fieldtype": "Link",
+   "label": "Scope",
+   "options": "Scope"
+  },
+  {
+   "fieldname": "column_break_dtnn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_yeln",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_uzfx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Unpaid",
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Payment Status",
+   "options": "\nUnpaid\nPaid\nCanceled"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department"
+  },
+  {
+   "fieldname": "section",
+   "fieldtype": "Link",
+   "label": "Section",
+   "options": "Section"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "label": "Location",
+   "options": "Location"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "bill_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Bill Amount"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [
+  {
+   "link_doctype": "Payment Requester",
+   "link_fieldname": "reference_name"
+  }
+ ],
+ "modified": "2025-12-11 09:48:08.174658",
+ "modified_by": "Administrator",
+ "module": "Cash Management",
+ "name": "SIM Bills Payment Required",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
