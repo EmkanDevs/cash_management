@@ -5,7 +5,16 @@ frappe.ui.form.on('HR Payment Required', {
 
                 frappe.new_doc('Payment Requester', {
                     project: frm.doc.project, 
-                    hr_payment_required : frm.doc.name
+                    hr_payment_required : frm.doc.name,
+                    transaction_date : frm.doc.created_date,
+                    grand_total : frm.doc.amount,
+                    reference_doctype : frm.doctype,
+                    reference_name: frm.doc.name,
+                    sector : frm.doc.sector,
+                    department : frm.doc.department,
+                    region_location : frm.doc.location,
+                    cost_center : frm.doc.cost_center,
+                    
                 });
 
             }, __('Create'));
