@@ -230,9 +230,13 @@
   {
    "link_doctype": "Payment Requester",
    "link_fieldname": "public_relation_payment_required"
+  },
+  {
+   "link_doctype": "Purchase Invoice",
+   "link_fieldname": "reference_name"
   }
  ],
- "modified": "2025-12-11 09:48:51.901207",
+ "modified": "2026-01-06 12:48:19.355841",
  "modified_by": "Administrator",
  "module": "Cash Management",
  "name": "Public Relation Payment Required",
