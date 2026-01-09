@@ -63,14 +63,6 @@ frappe.pages['payment-management-budget'].on_page_load = function (wrapper) {
 	const table_container = $("<div class='purchase-receipt-tra-table'></div>").appendTo(page.main);
 
 	// 🔹 Refresh button
-	// page.add_inner_button(__('Refresh'), function () {
-	// 	Object.keys(filters).forEach(k => {
-	// 		if (typeof filters[k] === 'number') filters[k] = 0;
-	// 		else filters[k] = '';
-	// 	});
-	// 	loadData();
-	// });
-	// 🔹 Refresh button
 	page.add_inner_button(__('Refresh'), function () {
 		Object.keys(filters).forEach(k => {
 			if (k === 'only_unpaid') {
